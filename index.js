@@ -32,7 +32,7 @@ bot.on('message', (msg) => {
   if (session.step < questions.length) {
     bot.sendMessage(chatId, questions[session.step]);
   } else {
-    const name = msg.from.first_name || 'Менеджер';
+    const name = msg.from.username ? '@' + msg.from.username : (msg.from.first_name || 'Менеджер');
     const report = `📊 Отчёт от ${name}:\n\n` +
       `📨 Сообщений: ${session.data.messages}\n` +
       `👀 Заинтересовались: ${session.data.interested}\n` +
