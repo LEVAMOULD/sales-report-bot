@@ -19,7 +19,15 @@ function startReport(chatId) {
   sessions[chatId] = { step: 0, data: {} };
   bot.sendMessage(chatId, '👋 Начинаем отчёт!\n\n' + questions[0]);
 }
-
+bot.onText(/\/test/, (msg) => {
+  bot.sendMessage(msg.chat.id, '🔔 Время сдать отчёт за сегодня!', {
+    reply_markup: {
+      inline_keyboard: [[
+        { text: '📊 Начать отчёт', callback_data: 'start_report' }
+      ]]
+    }
+  });
+});
 bot.onText(/\/start/, (msg) => {
   users.add(msg.chat.id);
   startReport(msg.chat.id);
