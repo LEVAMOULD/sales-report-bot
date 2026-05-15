@@ -27,41 +27,39 @@ bot.on('message', (msg) => {
 
   const session = sessions[chatId];
   const step = session.step;
+  const name = msg.from.username ? '@' + msg.from.username : (msg.from.first_name || 'Менеджер');
 
-  // Последний шаг — принимаем фото или текст
-  if (step === questions.length - 1) {
-    if (msg.photo) {
-      session.data[keys[step]] = '📸 Скриншот прикреплён';
-      const fileId = msg.photo[msg.photo.length - 1].file_id;
-      const name = msg.from.username ? '@' + msg.from.username : (msg.from.first_name || 'Менеджер');
-      const report = `📊 Отчёт от ${name}:\n\n` +
-        `📨 Сообщений: ${session.data.messages}\n` +
-        `👀 Заинтересовались: ${session.data.interested}\n` +
-        `✅ Сделок закрыто: ${session.data.deals}\n` +
-        `💬 Комментарий: ${session.data.comment || '—'}`;
-
-      bot.sendPhoto(ADMIN_ID, fileId, { caption: report });
-      bot.sendMessage(chatId, '✅ Отчёт отправлен! Молодец, так держать 💪');
-      delete sessions[chatId];
-    } else if (msg.text) {
-      session.data[keys[step]] = msg.text;
-      const name = msg.from.username ? '@' + msg.from.username : (msg.from.first_name || 'Менеджер');
-      const report = `📊 Отчёт от ${name}:\n\n` +
-        `📨 Сообщений: ${session.data.messages}\n` +
-        `👀 Заинтересовались: ${session.data.interested}\n` +
-        `✅ Сделок закрыто: ${session.data.deals}\n` +
-        `💬 Комментарий: ${session.data.comment}`;
-
-      bot.sendMessage(ADMIN_ID, report);
-      bot.sendMessage(chatId, '✅ Отчёт отправлен! Молодец, так держать 💪');
-      delete sessions[chatId];
-    }
+  if (step < questions.length - 1) {
+    if (!msg.text) return;
+    session.data[keys[step]] = msg.text;
+    session.step++;
+    bot.sendMessage(chatId, questions[session.step]);
     return;
   }
 
-  // Остальные шаги — только текст
-  if (!msg.text) return;
-  session.data[keys[step]] = msg.text;
-  session.step++;
-  bot.sendMessage(chatId, questions[session.step]);
+  // Последний шаг
+  if (msg.photo) {
+    const fileId = msg.photo[msg.photo.length - 1].file_id;
+    const caption = msg.caption || '—';
+    const report = `📊 Отчёт от ${name}:\n\n` +
+      `📨 Сообщений: ${session.data.messages}\n` +
+      `👀 Заинтересовались: ${session.data.interested}\n` +
+      `✅ Сделок закрыто: ${session.data.deals}\n` +
+      `💬 Комментарий: ${caption}`;
+
+    bot.sendPhoto(ADMIN_ID, fileId, { caption: report });
+    bot.sendMessage(chatId, '✅ Отчёт отправлен! Молодец, так держать 💪');
+    delete sessions[chatId];
+  } else if (msg.text) {
+    session.data[keys[step]] = msg.text;
+    const report = `📊 Отчёт от ${name}:\n\n` +
+      `📨 Сообщений: ${session.data.messages}\n` +
+      `👀 Заинтересовались: ${session.data.interested}\n` +
+      `✅ Сделок закрыто: ${session.data.deals}\n` +
+      `💬 Комментарий: ${session.data.comment}`;
+
+    bot.sendMessage(ADMIN_ID, report);
+    bot.sendMessage(chatId, '✅ Отчёт отправлен! Молодец, так держать 💪');
+    delete sessions[chatId];
+  }
 });
