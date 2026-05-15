@@ -4,6 +4,7 @@ const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 const ADMIN_ID = process.env.ADMIN_ID;
 
 const sessions = {};
+const users = new Set();
 
 const questions = [
   'Сколько сообщений отправил сегодня?',
@@ -14,14 +15,26 @@ const questions = [
 
 const keys = ['messages', 'interested', 'deals', 'comment'];
 
-bot.onText(/\/start/, (msg) => {
-  const chatId = msg.chat.id;
+function startReport(chatId) {
   sessions[chatId] = { step: 0, data: {} };
-  bot.sendMessage(chatId, '👋 Привет! Начинаем отчёт.\n\n' + questions[0]);
+  bot.sendMessage(chatId, '👋 Начинаем отчёт!\n\n' + questions[0]);
+}
+
+bot.onText(/\/start/, (msg) => {
+  users.add(msg.chat.id);
+  startReport(msg.chat.id);
+});
+
+bot.on('callback_query', (query) => {
+  if (query.data === 'start_report') {
+    bot.answerCallbackQuery(query.id);
+    startReport(query.message.chat.id);
+  }
 });
 
 bot.on('message', (msg) => {
   const chatId = msg.chat.id;
+  users.add(chatId);
   if (msg.text && msg.text.startsWith('/')) return;
   if (!sessions[chatId]) return;
 
@@ -37,7 +50,6 @@ bot.on('message', (msg) => {
     return;
   }
 
-  // Последний шаг
   if (msg.photo) {
     const fileId = msg.photo[msg.photo.length - 1].file_id;
     const caption = msg.caption || '—';
@@ -46,9 +58,8 @@ bot.on('message', (msg) => {
       `👀 Заинтересовались: ${session.data.interested}\n` +
       `✅ Сделок закрыто: ${session.data.deals}\n` +
       `💬 Комментарий: ${caption}`;
-
     bot.sendPhoto(ADMIN_ID, fileId, { caption: report });
-    bot.sendMessage(chatId, '✅ Отчёт отправлен! Молодец, так держать 💪');
+    bot.sendMessage(chatId, '✅ Отчёт отправлен! Молодец 💪');
     delete sessions[chatId];
   } else if (msg.text) {
     session.data[keys[step]] = msg.text;
@@ -57,9 +68,32 @@ bot.on('message', (msg) => {
       `👀 Заинтересовались: ${session.data.interested}\n` +
       `✅ Сделок закрыто: ${session.data.deals}\n` +
       `💬 Комментарий: ${session.data.comment}`;
-
     bot.sendMessage(ADMIN_ID, report);
-    bot.sendMessage(chatId, '✅ Отчёт отправлен! Молодец, так держать 💪');
+    bot.sendMessage(chatId, '✅ Отчёт отправлен! Молодец 💪');
     delete sessions[chatId];
   }
 });
+
+// Напоминание каждый день в 20:00
+function scheduleReminder() {
+  const now = new Date();
+  const next = new Date();
+  next.setHours(20, 0, 0, 0);
+  if (next <= now) next.setDate(next.getDate() + 1);
+  const delay = next - now;
+
+  setTimeout(() => {
+    users.forEach(chatId => {
+      bot.sendMessage(chatId, '🔔 Время сдать отчёт за сегодня!', {
+        reply_markup: {
+          inline_keyboard: [[
+            { text: '📊 Начать отчёт', callback_data: 'start_report' }
+          ]]
+        }
+      });
+    });
+    scheduleReminder();
+  }, delay);
+}
+
+scheduleReminder();
