@@ -86,7 +86,7 @@ bot.on('message', (msg) => {
 function scheduleReminder() {
   const now = new Date();
   const next = new Date();
-  next.setHours(20, 0, 0, 0);
+  next.setHours(17, 0, 0, 0);
   if (next <= now) next.setDate(next.getDate() + 1);
   const delay = next - now;
 
